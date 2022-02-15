@@ -8,43 +8,6 @@ import matplotlib.pyplot as plt
 
 
 
-
-
-class NearestNeighbor:
-	
-	
-	def __init__(self):
-		
-		self.train_data = None
-		self.train_labels = None
-		
-		
-	
-	
-	
-	def train(self, Xtr, Ytr):
-		
-		# Xtr = N x D matrix, N=number of training examples, D is the length of the input vector
-		# Ytr = N x 1 array of labels for each input
-		if(len(Xtr.shape) != 2 && len(Ytr.shape) !=1)
-		{
-			print("wrong shape for training")
-			return
-		}
-		
-		
-	
-	
-	
-
-
-
-
-
-
-
-
-
 cifar10_dir = 'cs231n/datasets/cifar-10-batches-py'
 
 # Cleaning up variables to prevent loading data multiple times (which may cause memory issue)
@@ -118,6 +81,119 @@ from cs231n.classifiers import KNearestNeighbor
 # the Classifier simply remembers the data and does no further processing 
 classifier = KNearestNeighbor()
 classifier.train(X_train, y_train)
+
+
+# Open cs231n/classifiers/k_nearest_neighbor.py and implement
+# compute_distances_two_loops.
+
+# Test your implementation:
+dists = classifier.compute_distances_two_loops(X_test)
+print(dists.shape)
+
+
+
+# We can visualize the distance matrix: each row is a single test example and
+# its distances to training examples
+plt.imshow(dists, interpolation='none')
+plt.show()
+
+
+
+
+
+# Now implement the function predict_labels and run the code below:
+# We use k = 1 (which is Nearest Neighbor).
+y_test_pred = classifier.predict_labels(dists, k=1)
+
+
+
+# Compute and print the fraction of correctly predicted examples
+num_correct = np.sum(y_test_pred == y_test)
+accuracy = float(num_correct) / num_test
+print('Got %d / %d correct => accuracy: %f' % (num_correct, num_test, accuracy))
+
+
+
+y_test_pred = classifier.predict_labels(dists, k=5)
+num_correct = np.sum(y_test_pred == y_test)
+accuracy = float(num_correct) / num_test
+print('Got %d / %d correct => accuracy: %f' % (num_correct, num_test, accuracy))
+
+
+
+# Now lets speed up distance matrix computation by using partial vectorization
+# with one loop. Implement the function compute_distances_one_loop and run the
+# code below:
+dists_one = classifier.compute_distances_one_loop(X_test)
+
+
+
+
+# To ensure that our vectorized implementation is correct, we make sure that it
+# agrees with the naive implementation. There are many ways to decide whether
+# two matrices are similar; one of the simplest is the Frobenius norm. In case
+# you haven't seen it before, the Frobenius norm of two matrices is the square
+# root of the squared sum of differences of all elements; in other words, reshape
+# the matrices into vectors and compute the Euclidean distance between them.
+difference = np.linalg.norm(dists - dists_one, ord='fro')
+print('One loop difference was: %f' % (difference, ))
+if difference < 0.001:
+	print('Good! The distance matrices are the same')
+else:
+	print('Uh-oh! The distance matrices are different')
+
+
+
+
+
+
+
+
+# Now implement the fully vectorized version inside compute_distances_no_loops
+# and run the code
+dists_two = classifier.compute_distances_no_loops(X_test)
+
+# check that the distance matrix agrees with the one we computed before:
+difference = np.linalg.norm(dists - dists_two, ord='fro')
+print('No loop difference was: %f' % (difference, ))
+if difference < 0.001:
+	print('Good! The distance matrices are the same')
+else:
+	print('Uh-oh! The distance matrices are different')
+
+
+
+
+# Let's compare how fast the implementations are
+def time_function(f, *args):
+	"""
+	Call a function f with args and return the time (in seconds) that it took to execute.
+	"""
+	import time
+	tic = time.time()
+	f(*args)
+	toc = time.time()
+	return toc - tic
+
+
+# ~22sec
+two_loop_time = time_function(classifier.compute_distances_two_loops, X_test)
+print('Two loop version took %f seconds' % two_loop_time)
+
+# ~21
+one_loop_time = time_function(classifier.compute_distances_one_loop, X_test)
+print('One loop version took %f seconds' % one_loop_time)
+
+# ~0.1sec
+no_loop_time = time_function(classifier.compute_distances_no_loops, X_test)
+print('No loop version took %f seconds' % no_loop_time)
+
+# You should see significantly faster performance with the fully vectorized implementation!
+
+# NOTE: depending on what machine you're using, 
+# you might not see a speedup when you go from two loops to one loop, 
+# and might even see a slow-down.
+
 
 
 # ex 

@@ -82,7 +82,20 @@ class KNearestNeighbor(object):
 				#####################################################################
 				# *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 				
-				pass
+				# Can compute the l2 distance squared 
+				# (x2-x1)^2 + (y2-y1)^2
+				dist = np.subtract(X[i], self.X_train[j]) # [y0-x0, y1-x1, y2 - x2, ... , yn - xn]
+				dist = np.square(dist) # [ (y0-x0)^2, (y1-x1)^2, (y2 - x2)^2, ... , (yn - xn)^2]
+				# this is sum across all elements of vector
+				dist = np.sum(dist)
+				dists[i][j] = np.sqrt(dist)
+				
+				# this is the l2 distance or the prev version squared
+				#dists[i, j] = np.linalg.norm(self.X_train[j] - X[i])
+				
+				
+				
+				
 			
 		
 		
@@ -99,6 +112,9 @@ class KNearestNeighbor(object):
 		Compute the distance between each test point in X and each training point
 		in self.X_train using a single loop over the test data.
 		
+		X = (num_test, D)
+		X_train = (num_train, D)
+		
 		Input / Output: Same as compute_distances_two_loops
 		"""
 		num_test = X.shape[0]
@@ -113,7 +129,15 @@ class KNearestNeighbor(object):
 			#######################################################################
 			# *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 			
-			pass
+			# the ith row is the dist between ith test image and each training image 
+			test_vector = X[i]
+			
+			# np.subtract(test_vector, self.X_train) - will subtract the row vector test_vector from each row of the matrix X_train 
+			
+			dists[i] = np.sqrt(np.sum( np.square(np.subtract(test_vector, self.X_train) ) , axis =1 ) )
+			
+			
+			
 		
 		# *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 		return dists
@@ -127,7 +151,8 @@ class KNearestNeighbor(object):
 		"""
 		Compute the distance between each test point in X and each training point
 		in self.X_train using no explicit loops.
-		
+		X = (num_test, D)
+		X_train = (num_train, D)
 		Input / Output: Same as compute_distances_two_loops
 		"""
 		num_test = X.shape[0]
@@ -147,8 +172,16 @@ class KNearestNeighbor(object):
 		#       and two broadcast sums.                                         #
 		#########################################################################
 		# *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
+		# https://people.duke.edu/~ccc14/sta-663-2016/03A_Numbers.html
+		#http://scipy.github.io/old-wiki/pages/EricsBroadcastingDoc
 		
-		pass
+		# doesn't work uses too much memory
+		#dists = np.sum( np.square( X[None,:] - self.X_train[:, None] ), axis=-1)
+		
+		# expand equation (x-y)^2 = x^2 + y^2 - 2xy
+		
+		dists = np.sqrt(np.sum(np.square(X), axis=1).reshape(num_test, 1) + np.sum(np.square(self.X_train), axis=1) - 2 * X.dot(self.X_train.T))
+		
 		
 		# *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 		return dists
@@ -171,10 +204,30 @@ class KNearestNeighbor(object):
 		"""
 		num_test = dists.shape[0]
 		y_pred = np.zeros(num_test)
+		
+		# argpartition will give back an array of indecies where the first k elements will be sorted
+		k_smallest_idx = np.argpartition(dists, k, axis = 1)
+		
 		for i in range(num_test):
 			# A list of length k storing the labels of the k nearest neighbors to
 			# the ith test point.
-			closest_y = []
+			
+			
+			
+			# get only the first k indecies
+			#k_smallest_idx = k_smallest_idx[:, 0:k] 
+			
+			# get the indecies of the k smallest distances for this test image
+			smallest_idx = k_smallest_idx[i, 0:k]
+			
+			# get the most frequent labels
+			closest_y = self.y_train[smallest_idx]
+			
+			counts = np.bincount(closest_y)
+			
+			# the label for the ith test case
+			y_pred[i] = np.argmax(counts)
+			
 			#########################################################################
 			# TODO:                                                                 #
 			# Use the distance matrix to find the k nearest neighbors of the ith    #
